@@ -2,17 +2,16 @@ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('ping')
-    .setDescription('عرض تأخير البوت'),
+    .setName('dice')
+    .setDescription('رمي النرد'),
   cooldown: 2,
   async execute(interaction, client, config) {
+    const result = Math.floor(Math.random() * 6) + 1;
+    
     const embed = new EmbedBuilder()
-      .setColor(config.color.success)
-      .setTitle('🏓 Pong!')
-      .addFields(
-        { name: 'Bot Ping', value: `${client.ws.ping}ms`, inline: true },
-        { name: 'Message Latency', value: `${Date.now() - interaction.createdTimestamp}ms`, inline: true }
-      )
+      .setColor(config.color.primary)
+      .setTitle('🎲 النرد')
+      .setDescription(`النتيجة: **${result}**`)
       .setFooter({ text: config.embedSettings.footer })
       .setTimestamp();
 

@@ -1,12 +1,11 @@
-const { EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
 module.exports = {
-  data: {
-    name: 'embed',
-    description: 'إرسال رسالة embed جميلة مع مثال'
-  },
+  data: new SlashCommandBuilder()
+    .setName('embed')
+    .setDescription('عرض رسالة embed جميلة'),
   cooldown: 3,
-  async execute(message, args, client, config) {
+  async execute(interaction, client, config) {
     const embed = new EmbedBuilder()
       .setColor('#5865F2')
       .setTitle('✨ مرحباً بك في البوت المتقدم')
@@ -17,10 +16,9 @@ module.exports = {
         { name: '📊 الإحصائيات', value: `السيرفرات: ${client.guilds.cache.size}\nالمستخدمين: ${client.users.cache.size}`, inline: false },
         { name: '🔗 الروابط', value: '[GitHub](https://github.com)\n[Discord](https://discord.com)', inline: false }
       )
-      .setImage('https://media.discordapp.net/attachments/1234567890/1234567890/banner.png')
-      .setFooter({ text: 'Advanced Discord Bot | Made with ❤️', iconURL: message.author.displayAvatarURL() })
+      .setFooter({ text: 'Advanced Discord Bot | Made with ❤️' })
       .setTimestamp();
 
-    await message.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed] });
   }
 };

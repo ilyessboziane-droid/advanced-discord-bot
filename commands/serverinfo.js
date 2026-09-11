@@ -1,13 +1,12 @@
-const { EmbedBuilder, ChannelType } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ChannelType } = require('discord.js');
 
 module.exports = {
-  data: {
-    name: 'serverinfo',
-    description: 'عرض معلومات السيرفر'
-  },
+  data: new SlashCommandBuilder()
+    .setName('serverinfo')
+    .setDescription('عرض معلومات السيرفر'),
   cooldown: 3,
-  async execute(message, args, client, config) {
-    const guild = message.guild;
+  async execute(interaction, client, config) {
+    const guild = interaction.guild;
     const channels = guild.channels.cache;
     const textChannels = channels.filter(c => c.type === ChannelType.GuildText).size;
     const voiceChannels = channels.filter(c => c.type === ChannelType.GuildVoice).size;
@@ -29,6 +28,6 @@ module.exports = {
       .setFooter({ text: config.embedSettings.footer })
       .setTimestamp();
 
-    await message.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed] });
   }
 };

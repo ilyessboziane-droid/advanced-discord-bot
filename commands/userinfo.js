@@ -1,14 +1,14 @@
-const { EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
 module.exports = {
-  data: {
-    name: 'userinfo',
-    description: 'عرض معلومات المستخدم'
-  },
+  data: new SlashCommandBuilder()
+    .setName('userinfo')
+    .setDescription('عرض معلومات المستخدم')
+    .addUserOption(option => option.setName('user').setDescription('المستخدم المراد عرض معلوماته').setRequired(false)),
   cooldown: 3,
-  async execute(message, args, client, config) {
-    const user = message.mentions.users.first() || message.author;
-    const member = message.guild.members.cache.get(user.id);
+  async execute(interaction, client, config) {
+    const user = interaction.options.getUser('user') || interaction.user;
+    const member = interaction.guild.members.cache.get(user.id);
 
     const embed = new EmbedBuilder()
       .setColor(config.color.primary)
@@ -25,6 +25,6 @@ module.exports = {
       .setFooter({ text: config.embedSettings.footer })
       .setTimestamp();
 
-    await message.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed] });
   }
 };

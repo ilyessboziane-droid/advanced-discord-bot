@@ -1,13 +1,13 @@
-const { EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
 module.exports = {
-  data: {
-    name: 'avatar',
-    description: 'عرض صورة الملف الشخصي'
-  },
+  data: new SlashCommandBuilder()
+    .setName('avatar')
+    .setDescription('عرض صورة الملف الشخصي')
+    .addUserOption(option => option.setName('user').setDescription('المستخدم').setRequired(false)),
   cooldown: 2,
-  async execute(message, args, client, config) {
-    const user = message.mentions.users.first() || message.author;
+  async execute(interaction, client, config) {
+    const user = interaction.options.getUser('user') || interaction.user;
     const avatarURL = user.displayAvatarURL({ dynamic: true, size: 1024 });
 
     const embed = new EmbedBuilder()
@@ -21,6 +21,6 @@ module.exports = {
       .setFooter({ text: config.embedSettings.footer })
       .setTimestamp();
 
-    await message.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed] });
   }
 };
