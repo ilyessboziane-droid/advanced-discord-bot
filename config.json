@@ -1,0 +1,13 @@
+{
+  "prefix": "!",
+  "color": {
+    "primary": "#5865F2",
+    "success": "#57F287",
+    "error": "#ED4245",
+    "warning": "#FFA500"
+  },
+  "embedSettings": {
+    "timestamp": true,
+    "footer": "Advanced Discord Bot"
+  }
+}
