@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Collection, ChannelType } = require('discord.js');
+const { Client, GatewayIntentBits, Collection, REST, Routes } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
@@ -19,48 +19,56 @@ const config = require('./config.json');
 client.commands = new Collection();
 client.cooldowns = new Collection();
 
-// Load Commands
+// Load Slash Commands
 const commandsPath = path.join(__dirname, 'commands');
-if (fs.existsSync(commandsPath)) {
-  const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+
+const commands = [];
+
+for (const file of commandFiles) {
+  const filePath = path.join(commandsPath, file);
+  const command = require(filePath);
   
-  for (const file of commandFiles) {
-    const filePath = path.join(commandsPath, file);
-    const command = require(filePath);
-    if (command.data && command.execute) {
-      client.commands.set(command.data.name, command);
-      console.log(`✅ تم تحميل الأمر: ${command.data.name}`);
-    }
+  if (command.data && command.execute) {
+    client.commands.set(command.data.name, command);
+    commands.push(command.data.toJSON());
+    console.log(`✅ تم تحميل الأمر: ${command.data.name}`);
   }
 }
 
 // Events
-client.once('ready', () => {
+client.once('ready', async () => {
   console.log(`\n🤖 البوت جاهز! تم تسجيل الدخول كـ: ${client.user.tag}`);
   console.log(`📊 عدد السيرفرات: ${client.guilds.cache.size}`);
+  console.log(`📝 عدد الأوامر: ${commands.length}`);
   
-  client.user.setActivity('!help | Advanced Bot', { type: 'WATCHING' });
+  client.user.setActivity('/ لعرض الأوامر', { type: 'WATCHING' });
+
+  // تسجيل Slash Commands
+  try {
+    const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
+    
+    console.log('\n⚙️ جاري تسجيل Slash Commands...');
+    
+    await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
+    
+    console.log(`✅ تم تسجيل ${commands.length} أمر بنجاح!`);
+  } catch (error) {
+    console.error('❌ خطأ في تسجيل الأوامر:', error);
+  }
 });
 
-client.on('guildCreate', (guild) => {
-  console.log(`\n✨ تمت إضافة البوت إلى سيرفر جديد: ${guild.name} (${guild.id})`);
-});
+client.on('interactionCreate', async (interaction) => {
+  if (!interaction.isChatInputCommand()) return;
 
-client.on('messageCreate', async (message) => {
-  if (message.author.bot) return;
-  if (!message.content.startsWith(config.prefix)) return;
+  const command = client.commands.get(interaction.commandName);
 
-  const args = message.content.slice(config.prefix.length).trim().split(/ +/);
-  const commandName = args.shift().toLowerCase();
-
-  const command = client.commands.get(commandName);
-  
   if (!command) {
-    return message.reply({
+    return interaction.reply({
       embeds: [{
         color: config.color.error,
         title: '❌ خطأ',
-        description: `الأمر \`${commandName}\` غير موجود!`,
+        description: `الأمر \`${interaction.commandName}\` غير موجود!`,
         footer: { text: config.embedSettings.footer }
       }],
       ephemeral: true
@@ -76,11 +84,11 @@ client.on('messageCreate', async (message) => {
   const timestamps = client.cooldowns.get(command.data.name);
   const cooldownAmount = (command.cooldown || 3) * 1000;
 
-  if (timestamps.has(message.author.id)) {
-    const expirationTime = timestamps.get(message.author.id) + cooldownAmount;
+  if (timestamps.has(interaction.user.id)) {
+    const expirationTime = timestamps.get(interaction.user.id) + cooldownAmount;
     if (now < expirationTime) {
       const timeLeft = (expirationTime - now) / 1000;
-      return message.reply({
+      return interaction.reply({
         embeds: [{
           color: config.color.warning,
           title: '⏳ Cooldown',
@@ -92,23 +100,31 @@ client.on('messageCreate', async (message) => {
     }
   }
 
-  timestamps.set(message.author.id, now);
-  setTimeout(() => timestamps.delete(message.author.id), cooldownAmount);
+  timestamps.set(interaction.user.id, now);
+  setTimeout(() => timestamps.delete(interaction.user.id), cooldownAmount);
 
   try {
-    await command.execute(message, args, client, config);
+    await command.execute(interaction, client, config);
   } catch (error) {
-    console.error(`❌ خطأ في تنفيذ الأمر ${commandName}:`, error);
-    return message.reply({
-      embeds: [{
-        color: config.color.error,
-        title: '❌ حدث خطأ',
-        description: 'حدث خطأ أثناء تنفيذ الأمر. حاول مرة أخرى لاحقاً',
-        footer: { text: config.embedSettings.footer }
-      }],
-      ephemeral: true
-    }).catch(() => {});
+    console.error(`❌ خطأ في تنفيذ الأمر ${interaction.commandName}:`, error);
+    
+    const errorEmbed = {
+      color: config.color.error,
+      title: '❌ حدث خطأ',
+      description: 'حدث خطأ أثناء تنفيذ الأمر. حاول مرة أخرى لاحقاً',
+      footer: { text: config.embedSettings.footer }
+    };
+
+    if (interaction.replied || interaction.deferred) {
+      await interaction.followUp({ embeds: [errorEmbed], ephemeral: true }).catch(() => {});
+    } else {
+      await interaction.reply({ embeds: [errorEmbed], ephemeral: true }).catch(() => {});
+    }
   }
+});
+
+client.on('guildCreate', (guild) => {
+  console.log(`\n✨ تمت إضافة البوت إلى سيرفر جديد: ${guild.name} (${guild.id})`);
 });
 
 // Error Handling
